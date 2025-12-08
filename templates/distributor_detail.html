@@ -1,0 +1,189 @@
+{% extends "base.html" %}
+
+{% block title %}{{ distributor.name }} · Kronny Showcase{% endblock %}
+
+{% block header %}
+<header class="topbar">
+  <div class="topbar-left">
+    <div class="brand-badge">
+      <span class="logo-pill">KS</span>
+      <div>
+        <div class="brand-title">Kronny Showcase</div>
+        <div class="brand-subtitle">artist db – control centre</div>
+      </div>
+    </div>
+  </div>
+  <div class="topbar-right">
+    <a href="{{ url_for('dashboard') }}" class="btn-secondary">← Main dashboard</a>
+    <div class="user-pill">
+      <div class="user-initial">{{ username[:1]|upper }}</div>
+      <div class="user-meta">
+        <span class="user-name">{{ username }}</span>
+        <span class="user-role">{{ user_role|capitalize }}</span>
+      </div>
+      <a href="{{ url_for('logout') }}" class="logout-link">Logout</a>
+    </div>
+  </div>
+</header>
+{% endblock %}
+
+{% block content %}
+<div class="detail-layout">
+  <div class="detail-main">
+    <section class="panel">
+      <div class="panel-header">
+        <h2>Distributor overview</h2>
+      </div>
+      <div class="detail-hero">
+        <div class="detail-avatar">
+          {% if distributor.logo_url %}
+          <img src="{{ distributor.logo_url }}" alt="{{ distributor.name }}" />
+          {% else %}
+          <div class="avatar-placeholder">{{ distributor.name[:1]|upper }}</div>
+          {% endif %}
+        </div>
+        <div class="detail-hero-meta">
+          <h1>{{ distributor.name }}</h1>
+          <div class="artist-meta-row">
+            <span class="chip">
+              Market value:
+              {% if distributor.market_value %}
+              ₹{{ "{:,}".format(distributor.market_value) }}
+              {% else %}N/A{% endif %}
+            </span>
+            <span class="chip">Projects: {{ num_projects }}</span>
+            <span class="chip">Artists: {{ num_artists }}</span>
+            <span class="chip">Productions: {{ num_productions }}</span>
+            {% if distributor.url %}
+            <a href="{{ distributor.url }}" target="_blank" rel="noopener" class="chip chip-link">
+              Website
+            </a>
+            {% endif %}
+          </div>
+        </div>
+      </div>
+
+      <div class="detail-metrics-row">
+        <div class="metric-card">
+          <div class="metric-label">Total views</div>
+          <div class="metric-value">{{ "{:,}".format(total_views or 0) }}</div>
+          <div class="metric-sub">Across distributed projects</div>
+        </div>
+        <div class="metric-card">
+          <div class="metric-label">Catalogue size</div>
+          <div class="metric-value">{{ num_projects }}</div>
+          <div class="metric-sub">In Artist DB</div>
+        </div>
+        <div class="metric-card">
+          <div class="metric-label">Top artists</div>
+          <div class="metric-sub">See releases table for details.</div>
+        </div>
+      </div>
+    </section>
+    
+
+    <section class="panel">
+      <div class="panel-header">
+        <h2>Valuation / revenue</h2>
+      </div>
+      <p class="notes-text">
+        Current implementation uses the single <code>distributors.market_value</code> column as a
+        proxy for revenue. You can extend this with per-project or per-territory stats in new tables
+        later without changing the UI.
+      </p>
+    </section>
+  </div>
+
+  <div class="detail-side">
+    <section class="panel">
+      <div class="panel-header">
+        <h2>Top projects</h2>
+        <span class="badge subtle">by views</span>
+      </div>
+      <div class="table-wrapper">
+        <table class="data-table">
+          <thead>
+          <tr>
+            <th>Project</th>
+            <th>Views</th>
+            <th>Play</th>
+          </tr>
+          </thead>
+          <tbody>
+          {% for pid, title, song_link, views in top_projects %}
+          <tr>
+            <td>{{ title or "(untitled)" }}</td>
+            <td>{{ "{:,}".format(views or 0) }}</td>
+            <td>
+              {% if song_link %}
+              <button
+                class="link-btn open-project"
+                data-song-link="{{ song_link }}"
+                data-title="{{ title }}"
+              >
+                ▶
+              </button>
+              {% else %}
+              <span class="muted">—</span>
+              {% endif %}
+            </td>
+          </tr>
+          {% endfor %}
+          {% if not top_projects %}
+          <tr><td colspan="3" class="muted">No projects with views yet.</td></tr>
+          {% endif %}
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section class="panel">
+      <div class="panel-header">
+        <h2>Releases</h2>
+        <span class="badge subtle">Artists · productions · projects</span>
+      </div>
+      <div class="table-wrapper">
+        <table class="data-table">
+          <thead>
+          <tr>
+            <th>Project</th>
+            <th>Artist</th>
+            <th>Production</th>
+          </tr>
+          </thead>
+          <tbody>
+          {% for colab, project, artist, production in collabs %}
+          <tr>
+            <td>
+              {% if project.title %}
+              <button
+                class="link-btn open-project"
+                data-song-link="{{ project.song_link }}"
+                data-title="{{ project.title }}"
+              >
+                {{ project.title }}
+              </button>
+              {% else %}
+              <span class="muted">(no title)</span>
+              {% endif %}
+            </td>
+            <td>
+              <a href="{{ url_for('artist_detail', artist_id=artist.artist_id) }}"
+                 class="entity-link">{{ artist.name }}</a>
+            </td>
+            <td>
+              <a href="{{ url_for('production_detail', production_id=production.production_id) }}"
+                 class="entity-link">{{ production.name }}</a>
+            </td>
+          </tr>
+          {% endfor %}
+          {% if not collabs %}
+          <tr><td colspan="3" class="muted">No releases yet.</td></tr>
+          {% endif %}
+          </tbody>
+        </table>
+      </div>
+    </section>
+  </div>
+</div>
+{% endblock %}

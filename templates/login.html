@@ -1,0 +1,58 @@
+{% extends "base.html" %}
+
+{% block title %}Login · Kronny Showcase{% endblock %}
+
+{% block header %}
+<div class="intro-wrapper">
+    <div class="intro-logo">
+        <span class="logo-pill">KS</span>
+        <div class="intro-text">
+            <h1>Kronny Showcase</h1>
+            <p>Artist DB – Control Center</p>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+
+{% block content %}
+<div class="login-overlay">
+    <div class="login-card pop-in">
+        <h2>Sign in</h2>
+        <p class="login-subtitle">Choose your lane: Admin, Manager or Viewer.</p>
+
+        {% with messages = get_flashed_messages(with_categories=true) %}
+          {% if messages %}
+            <div class="flash-container">
+              {% for category, message in messages %}
+                <div class="flash flash-{{ category }}">{{ message }}</div>
+              {% endfor %}
+            </div>
+          {% endif %}
+        {% endwith %}
+
+        <form method="POST" class="login-form">
+            <label>
+                Username
+                <input type="text" name="username" required autocomplete="username" />
+            </label>
+
+            <label>
+                Password
+                <input type="password" name="password" required autocomplete="current-password" />
+            </label>
+
+            <button type="submit" class="btn-primary full-width">
+                Enter Dashboard
+            </button>
+        </form>
+
+        <div class="theme-toggle-wrapper login-toggle">
+            <button id="themeToggle" class="theme-toggle-btn" type="button">
+                <span class="icon-moon">🌙</span>
+                <span class="icon-sun">☀️</span>
+            </button>
+        </div>
+    </div>
+</div>
+{% endblock %}

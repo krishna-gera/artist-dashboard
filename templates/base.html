@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+    <meta charset="UTF-8" />
+    <title>Kronny Showcase</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <link
+        rel="stylesheet"
+        href="{{ url_for('static', filename='css/style.css') }}"
+    />
+    <script defer src="{{ url_for('static', filename='js/theme.js') }}"></script>
+</head>
+<body class="app-body">
+    <!-- Global loading screen -->
+    <div id="global-loader">
+        <div class="loader-orbit">
+            <div class="orbit-dot"></div>
+            <div class="orbit-dot"></div>
+            <div class="orbit-dot"></div>
+        </div>
+        <div class="loader-text">Launching Studio Panel…</div>
+    </div>
+
+    {% block header %}{% endblock %}
+
+    <main class="app-main">
+        {% block content %}{% endblock %}
+    </main>
+</body>
+</html>

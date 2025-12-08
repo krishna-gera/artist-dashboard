@@ -1,0 +1,227 @@
+{% extends "base.html" %}
+
+{% block title %}{{ artist.name }} · Kronny Showcase{% endblock %}
+
+{% block header %}
+<header class="topbar">
+  <div class="topbar-left">
+    <div class="brand-badge">
+      <span class="logo-pill">KS</span>
+      <div>
+        <div class="brand-title">Kronny Showcase</div>
+        <div class="brand-subtitle">artist db – control centre</div>
+      </div>
+    </div>
+  </div>
+  <div class="topbar-right">
+    <a href="{{ url_for('dashboard') }}" class="btn-secondary">← Main dashboard</a>
+    <div class="user-pill">
+      <div class="user-initial">{{ username[:1]|upper }}</div>
+      <div class="user-meta">
+        <span class="user-name">{{ username }}</span>
+        <span class="user-role">{{ user_role|capitalize }}</span>
+      </div>
+      <a href="{{ url_for('logout') }}" class="logout-link">Logout</a>
+    </div>
+  </div>
+</header>
+{% endblock %}
+
+{% block content %}
+<div class="detail-layout">
+
+  <!-- LEFT: profile + calendar -->
+  <div class="detail-main">
+    <section class="panel">
+      <div class="panel-header">
+        <h2>Artist overview</h2>
+      </div>
+
+      <div class="detail-hero">
+        <div class="detail-avatar">
+          {% if artist.photo_url %}
+          <img src="{{ artist.photo_url }}" alt="{{ artist.name }}" />
+          {% else %}
+          <div class="avatar-placeholder">{{ artist.name[:1]|upper }}</div>
+          {% endif %}
+        </div>
+        <div class="detail-hero-meta">
+          <h1>{{ artist.name }}</h1>
+          <div class="artist-meta-row">
+            <span class="chip">
+              Rank: {{ ranking.ranking_position if ranking else "N/A" }}
+            </span>
+            <span class="chip">
+              Projects: {{ num_projects }}
+            </span>
+            <span class="chip">
+              Productions: {{ num_productions }}
+            </span>
+            <span class="chip">
+              Distributors: {{ num_distributors }}
+            </span>
+          </div>
+        </div>
+      </div>
+
+      <div class="detail-metrics-row">
+        <div class="metric-card">
+          <div class="metric-label">Total views</div>
+          <div class="metric-value">{{ "{:,}".format(total_views or 0) }}</div>
+          <div class="metric-sub">Across all projects in DB</div>
+        </div>
+        <div class="metric-card">
+          <div class="metric-label">Calendar events</div>
+          <div class="metric-value">{{ events|length }}</div>
+          <div class="metric-sub">Studio sessions, shoots, etc.</div>
+        </div>
+        <div class="metric-card">
+          <div class="metric-label">Last project</div>
+          <div class="metric-sub">
+            {% if artist.last_project %}
+              {{ artist.last_project.title or "Untitled" }}
+            {% else %}
+              No last project set
+            {% endif %}
+          </div>
+          {% if artist.last_project %}
+            <button
+              class="btn-ghost small open-project"
+              data-song-link="{{ artist.last_project.song_link }}"
+              data-title="{{ artist.last_project.title }}"
+            >
+              ▶ Play last release
+            </button>
+          {% endif %}
+        </div>
+      </div>
+      
+    </section>
+
+    <section class="panel">
+      <div class="panel-header">
+        <h2>Artist calendar</h2>
+        <span class="badge subtle">{{ cal_month_name }} {{ cal_year }}</span>
+      </div>
+      <div class="mini-calendar">
+        <div class="mini-cal-header">
+          <span>Mon</span><span>Tue</span><span>Wed</span><span>Thu</span><span>Fri</span><span>Sat</span><span>Sun</span>
+        </div>
+        <div class="mini-cal-grid">
+          {% for week in cal_weeks %}
+            {% for day in week %}
+              {% if day == 0 %}
+                <div class="mini-cal-cell empty"></div>
+              {% else %}
+                {% if day in cal_busy_days %}
+                  <div class="mini-cal-cell busy">
+                    <span class="d">{{ day }}</span>
+                    <span class="dot"></span>
+                  </div>
+                {% else %}
+                  <div class="mini-cal-cell">
+                    <span class="d">{{ day }}</span>
+                  </div>
+                {% endif %}
+              {% endif %}
+            {% endfor %}
+          {% endfor %}
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <!-- RIGHT: top tracks + collabs -->
+  <div class="detail-side">
+    <section class="panel">
+      <div class="panel-header">
+        <h2>Top tracks</h2>
+        <span class="badge subtle">by views</span>
+      </div>
+      <div class="table-wrapper">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>Track</th>
+              <th>Views</th>
+              <th>Play</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for pid, title, song_link, views in top_projects %}
+            <tr>
+              <td>{{ title or "(untitled)" }}</td>
+              <td>{{ "{:,}".format(views or 0) }}</td>
+              <td>
+                {% if song_link %}
+                <button
+                  class="link-btn open-project"
+                  data-song-link="{{ song_link }}"
+                  data-title="{{ title }}"
+                >
+                  ▶
+                </button>
+                {% else %}
+                <span class="muted">—</span>
+                {% endif %}
+              </td>
+            </tr>
+            {% endfor %}
+            {% if not top_projects %}
+            <tr><td colspan="3" class="muted">No tracks with views yet.</td></tr>
+            {% endif %}
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section class="panel">
+      <div class="panel-header">
+        <h2>Collaborations</h2>
+        <span class="badge subtle">projects · studios · distributors</span>
+      </div>
+      <div class="table-wrapper">
+        <table class="data-table">
+          <thead>
+          <tr>
+            <th>Project</th>
+            <th>Production</th>
+            <th>Distributor</th>
+          </tr>
+          </thead>
+          <tbody>
+          {% for colab, project, production, distributor in collabs %}
+          <tr>
+            <td>
+              {% if project.title %}
+              <button
+                class="link-btn open-project"
+                data-song-link="{{ project.song_link }}"
+                data-title="{{ project.title }}"
+              >
+                {{ project.title }}
+              </button>
+              {% else %}
+              <span class="muted">(no title)</span>
+              {% endif %}
+            </td>
+            <td>
+              <a href="{{ url_for('production_detail', production_id=production.production_id) }}"
+                 class="entity-link">{{ production.name }}</a>
+            </td>
+            <td>
+              <a href="{{ url_for('distributor_detail', distributor_id=distributor.distributor_id) }}"
+                 class="entity-link">{{ distributor.name }}</a>
+            </td>
+          </tr>
+          {% endfor %}
+          {% if not collabs %}
+          <tr><td colspan="3" class="muted">No collaborations in database.</td></tr>
+          {% endif %}
+          </tbody>
+        </table>
+      </div>
+    </section>
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,394 @@
+{% extends "base.html" %}
+
+{% block title %}Kronny Showcase{% endblock %}
+
+{% block header %}
+<header class="topbar">
+    <div class="topbar-left">
+        <div class="brand-badge">
+          <span class="logo-pill">KS</span>
+        <div>
+            <div class="brand-title">Kronny Showcase</div>
+            <div class="brand-subtitle">artist db – control centre</div>
+        </div>
+    </div>
+
+
+        <div class="search-wrapper">
+            <input
+                id="globalSearch"
+                type="search"
+                placeholder="Search artist, project, production, distributor…"
+            />
+            <div id="searchResults" class="search-results"></div>
+        </div>
+    </div>
+
+    <div class="topbar-right">
+        {% if user_role in ["admin", "manager"] %}
+        <button
+            class="btn-ghost"
+            id="btnOpenInsert"
+            type="button"
+            data-role="{{ user_role }}"
+        >
+            + Insert
+        </button>
+        {% endif %}
+        {% if user_role == "admin" %}
+        <button class="btn-ghost" id="btnOpenDelete" type="button">
+            − Delete
+        </button>
+        {% endif %}
+
+        <button id="themeToggle" class="theme-toggle-btn" type="button">
+            <span class="icon-moon">🌙</span>
+            <span class="icon-sun">☀️</span>
+        </button>
+
+        <div class="user-pill">
+            <div class="user-initial">
+                {{ username[:1]|upper }}
+            </div>
+            <div class="user-meta">
+                <span class="user-name">{{ username }}</span>
+                <span class="user-role">{{ user_role|capitalize }}</span>
+            </div>
+            <a href="{{ url_for('logout') }}" class="logout-link">Logout</a>
+        </div>
+    </div>
+</header>
+{% endblock %}
+
+{% block content %}
+<div class="dashboard-grid">
+    <!-- Key metrics row -->
+    <section class="panel key-metrics">
+        <div class="panel-header">
+            <h2>Key Metrics</h2>
+            <span class="badge">Today · {{ today }}</span>
+        </div>
+        <div class="metric-row">
+            <div class="metric-card">
+                <div class="metric-label">Total Projects</div>
+                <div class="metric-value">{{ total_projects }}</div>
+                <div class="metric-sub">All releases in catalog</div>
+            </div>
+
+            <div class="metric-card">
+                <div class="metric-label">Artists</div>
+                <div class="metric-value">{{ total_artists }}</div>
+                <div class="metric-sub">Active profiles</div>
+            </div>
+
+            <div class="metric-card">
+                <div class="metric-label">Productions</div>
+                <div class="metric-value">{{ total_productions }}</div>
+                <div class="metric-sub">Partner studios</div>
+            </div>
+
+            <div class="metric-card">
+                <div class="metric-label">Distributors</div>
+                <div class="metric-value">{{ total_distributors }}</div>
+                <div class="metric-sub">Streaming & labels</div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Layout: left main canvas + right sidebar -->
+    <div class="layout-main">
+        <!-- ARTISTS -->
+        <section id="artists-section" class="panel">
+            <div class="panel-header">
+                <h2>Artists</h2>
+                <span class="badge subtle">Profiles · Calendar · Ranks</span>
+            </div>
+            <div class="card-grid">
+                {% for artist in artists %}
+                <article class="artist-card">
+                    <div class="artist-main">
+                        <div class="artist-avatar">
+                            {% if artist.photo_url %}
+                            <img src="{{ artist.photo_url }}" alt="{{ artist.name }}" />
+                            {% else %}
+                            <div class="avatar-placeholder">
+                                {{ artist.name[:1]|upper }}
+                            </div>
+                            {% endif %}
+                        </div>
+                        <div class="artist-info">
+                            <h3>
+                                <a href="{{ url_for('artist_detail', artist_id=artist.artist_id) }}"
+                                  class="entity-link">
+                                    {{ artist.name }}
+                                </a>
+                            </h3>
+
+                            <div class="artist-meta-row">
+                                <span class="chip">
+                                    Rank:
+                                    {{ rankings.get(artist.artist_id, "N/A") }}
+                                </span>
+                                {% if artist.last_project %}
+                                <button
+                                    class="chip chip-link open-project"
+                                    data-song-link="{{ artist.last_project.song_link }}"
+                                    data-title="{{ artist.last_project.title }}"
+                                >
+                                    Last Project:
+                                    {{ artist.last_project.title or "Untitled" }}
+                                </button>
+                                {% else %}
+                                <span class="chip muted">No last project</span>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="artist-calendar">
+                        <div class="calendar-header">
+                            Busy Calendar
+                        </div>
+                        <div class="calendar-strip">
+                            {% set events = calendars.get(artist.artist_id, []) %}
+                            {% if events %}
+                                {% for e in events[:10] %}
+                                <div class="calendar-pill" title="{{ e.description }}">
+                                    <span class="calendar-date">
+                                        {{ e.event_date.strftime('%d %b') if e.event_date }}
+                                    </span>
+                                </div>
+                                {% endfor %}
+                            {% else %}
+                                <div class="calendar-empty">No events logged</div>
+                            {% endif %}
+                        </div>
+                    </div>
+                </article>
+                {% endfor %}
+            </div>
+        </section>
+
+        <!-- PRODUCTIONS -->
+        <section id="productions-section" class="panel">
+            <div class="panel-header">
+                <h2>Productions</h2>
+                <span class="badge subtle">Studios & Market Value</span>
+            </div>
+            <div class="table-wrapper">
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>Studio</th>
+                            <th>Logo</th>
+                            <th>Last Project</th>
+                            <th>Market Value</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for p in productions %}
+                        <tr>
+                            <td>
+                                <a href="{{ url_for('production_detail', production_id=p.production_id) }}"
+                                  class="entity-link">
+                                    {{ p.name }}
+                                </a>
+                            </td>
+
+                            <td>
+                                {% if p.logo_url %}
+                                <img
+                                    src="{{ p.logo_url }}"
+                                    alt="{{ p.name }}"
+                                    class="mini-logo"
+                                />
+                                {% else %}
+                                <span class="muted">—</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if p.last_project %}
+                                <button
+                                    class="link-btn open-project"
+                                    data-song-link="{{ p.last_project.song_link }}"
+                                    data-title="{{ p.last_project.title }}"
+                                >
+                                    {{ p.last_project.title or "Open project" }}
+                                </button>
+                                {% else %}
+                                <span class="muted">No data</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if p.market_value %}
+                                ₹{{ "{:,}".format(p.market_value) }}
+                                {% else %}
+                                <span class="muted">—</span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </section>
+
+        <!-- DISTRIBUTORS -->
+        <section id="distributors-section" class="panel">
+            <div class="panel-header">
+                <h2>Distributors</h2>
+                <span class="badge subtle">Partners & Reach</span>
+            </div>
+            <div class="table-wrapper">
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>Name</th>
+                            <th>Logo</th>
+                            <th>URL</th>
+                            <th>Market Value</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for d in distributors %}
+                        <tr>
+                            <td>
+                                <a href="{{ url_for('distributor_detail', distributor_id=d.distributor_id) }}"
+                                  class="entity-link">
+                                    {{ d.name }}
+                                </a>
+                            </td>
+
+                            <td>
+                                {% if d.logo_url %}
+                                <img
+                                    src="{{ d.logo_url }}"
+                                    alt="{{ d.name }}"
+                                    class="mini-logo"
+                                />
+                                {% else %}
+                                <span class="muted">—</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if d.url %}
+                                <a
+                                    href="{{ d.url }}"
+                                    target="_blank"
+                                    rel="noopener"
+                                    class="link-btn"
+                                >
+                                    Open
+                                </a>
+                                {% else %}
+                                <span class="muted">—</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if d.market_value %}
+                                ₹{{ "{:,}".format(d.market_value) }}
+                                {% else %}
+                                <span class="muted">—</span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </section>
+    </div>
+
+    <!-- Right sidebar -->
+    <aside class="layout-sidebar">
+        <section class="panel">
+            <div class="panel-header">
+                <h2>Activity Timeline</h2>
+                <span class="badge subtle">Events & Releases</span>
+            </div>
+            <ul class="timeline">
+                {% for artist in artists[:5] %}
+                <li class="timeline-item">
+                    <div class="timeline-dot"></div>
+                    <div>
+                        <div class="timeline-title">
+                            {{ artist.name }}
+                            {% if artist.last_project %}
+                            · {{ artist.last_project.title }}
+                            {% endif %}
+                        </div>
+                        <div class="timeline-sub">
+                            Rank
+                            {{ rankings.get(artist.artist_id, "N/A") }}
+                        </div>
+                    </div>
+                </li>
+                {% endfor %}
+            </ul>
+        </section>
+
+        <section class="panel">
+            <div class="panel-header">
+                <h2>Implementation Notes</h2>
+            </div>
+            <p class="notes-text">
+                This is a design-first shell wired to your Neon Postgres DB.
+                Use the Insert / Delete controls to keep data fresh while roles
+                control who can change what.
+            </p>
+        </section>
+    </aside>
+</div>
+
+<!-- Insert / Delete modal (single shell for both) -->
+<div id="manageModal" class="modal-backdrop hidden">
+    <div class="modal-card">
+        <div class="modal-header">
+            <h3 id="manageTitle">Manage Data</h3>
+            <button class="close-modal" type="button" data-close>×</button>
+        </div>
+        <div class="modal-body">
+            <div class="manage-tabs">
+                <button class="manage-tab active" data-entity="artist">Artist</button>
+                <button class="manage-tab" data-entity="project">Project</button>
+                <button class="manage-tab" data-entity="production">Production</button>
+                <button class="manage-tab" data-entity="distributor">Distributor</button>
+            </div>
+
+            <form id="manageForm" class="manage-form">
+                <!-- Fields will be swapped by JS based on entity -->
+            </form>
+
+            <div id="manageMessage" class="manage-message"></div>
+        </div>
+        <div class="modal-footer">
+            <button class="btn-secondary" type="button" data-close>Cancel</button>
+            <button id="manageSubmit" class="btn-primary" type="button">
+                Submit
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- YouTube player modal -->
+<div id="playerModal" class="modal-backdrop hidden">
+    <div class="modal-card player-card">
+        <div class="modal-header">
+            <h3 id="playerTitle">Now Playing</h3>
+            <button class="close-modal" type="button" data-close>×</button>
+        </div>
+        <div class="modal-body">
+            <div class="player-frame-wrapper">
+                <iframe
+                    id="playerFrame"
+                    src=""
+                    frameborder="0"
+                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                    allowfullscreen
+                ></iframe>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
